@@ -110,24 +110,24 @@ Java_com_vily_ffmpegmedia_FFmpegUtils_n_1stop(JNIEnv *env, jobject instance) {
 
     // TODO
 
-//    if (!nexit) {
-//        return;
-//    }
-//    nexit = false;   // 防止重复去退出
-//    if (fFmpeg != NULL) {
-//        fFmpeg->release();
-//        delete(fFmpeg);
-//        fFmpeg=NULL;
-//        if(callJava != NULL)
-//        {
-//            delete(callJava);
-//            callJava = NULL;
-//        }
-//        if(playstatus != NULL)
-//        {
-//            delete(playstatus);
-//            playstatus = NULL;
-//        }
-//    }
-//    nexit = true;
+    if (!nexit) {
+        return;
+    }
+    nexit = false;   // 防止重复去退出
+    if (fFmpeg != NULL) {
+        fFmpeg->release();
+        delete(fFmpeg);
+        fFmpeg=NULL;
+        if(callJava != NULL)
+        {
+            delete(callJava);
+            callJava = NULL;
+        }
+        if(playstatus != NULL)
+        {
+            delete(playstatus);
+            playstatus = NULL;
+        }
+    }
+    nexit = true;
 }
