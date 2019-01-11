@@ -63,6 +63,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onCallByte(byte[] bytes) {
 
+
             }
 
             @Override
@@ -89,6 +90,11 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onPause(boolean pause) {
                 Log.i(TAG, "onPause: --------当前状态 "+pause);
+            }
+
+            @Override
+            public void onComplete() {
+                Log.i(TAG, "onComplete: --------结束了");
             }
         });
 
@@ -129,6 +135,10 @@ public class MainActivity extends AppCompatActivity {
 
     public void resume(View view) {
         mFFmpegUtils.resume();
+    }
+
+    public void stop(View view) {
+        mFFmpegUtils.stop();
     }
 }
 

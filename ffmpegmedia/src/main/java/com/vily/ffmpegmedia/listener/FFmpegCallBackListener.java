@@ -20,4 +20,6 @@ public interface FFmpegCallBackListener {
     void onAudioData(int length);
 
     void onPause(boolean pause);
+
+    void onComplete();
 }

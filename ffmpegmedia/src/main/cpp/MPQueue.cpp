@@ -19,7 +19,7 @@ FFmpegQueue::FFmpegQueue(PlayStatus *playStatue) {
 }
 
 FFmpegQueue::~FFmpegQueue() {
-
+    clearAvpacket();
 }
 
 int FFmpegQueue::putAvpacket(AVPacket *packet) {
@@ -69,4 +69,18 @@ int FFmpegQueue::getQueueSize() {
     size = queuePacket.size();          // 计算队列数据到时候也要记得加锁解锁
     pthread_mutex_unlock(&mutexPacket);
     return size;
+}
+
+void FFmpegQueue::clearAvpacket() {
+    pthread_cond_signal(&condpacket);  // 释放的时候  万一还有数据在今出入  所以要加锁  先发个信号
+    pthread_mutex_lock(&mutexPacket);
+
+    while (!queuePacket.empty()){   // 队列不为空
+        AVPacket *packet=queuePacket.front();
+        queuePacket.pop();
+        av_packet_free(&packet);
+        av_free(packet);
+        packet = NULL;
+    }
+    pthread_mutex_unlock(&mutexPacket);
 }

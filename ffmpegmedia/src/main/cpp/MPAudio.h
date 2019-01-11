@@ -76,6 +76,8 @@ public:
 
     void resume();
 
+    void release();
+
 
     void initOpenSLES();  //  初始化 openSSL
     int getCurrentSampleRateForOpensles(int sample_rate);

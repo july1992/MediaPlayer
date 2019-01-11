@@ -24,6 +24,7 @@ public:
     jmethodID jmid_load;   // prepare的回调
     jmethodID jmid_timeInfo;   // prepare的回调
     jmethodID jmid_audioData;   // data的回调
+    jmethodID jmid_complete;   // data的回调
 
 public:
 
@@ -34,6 +35,7 @@ public:
     void onCallLoad(int type, bool load);   // 加载回调
     void onCallTimeInfo(int type,int curr,int total);
     void onCallAudioData(int type,int length);
+    void onCallComplete(int type);
 };
 
 

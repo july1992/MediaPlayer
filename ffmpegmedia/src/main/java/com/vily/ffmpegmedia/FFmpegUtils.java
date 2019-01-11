@@ -111,6 +111,13 @@ public class FFmpegUtils {
         }
     }
 
+    public void onCallComplete(){
+        if(mFFmpegCallBackListener!=null){
+            stop();// 播放结束后停止播放
+            mFFmpegCallBackListener.onComplete();
+        }
+    }
+
     public native void n_parpared(String source);
 
     private native void n_start();
@@ -118,6 +125,8 @@ public class FFmpegUtils {
     private native void n_pause();
 
     private native void n_resume();
+
+    private native void n_stop();
 
 
     public void pause() {
@@ -134,5 +143,17 @@ public class FFmpegUtils {
         {
             mFFmpegCallBackListener.onPause(false);
         }
+    }
+
+    public void stop() {
+
+        mTimeInfoBean=null;
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                n_stop();
+            }
+        }).start();
     }
 }

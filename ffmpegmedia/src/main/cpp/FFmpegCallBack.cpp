@@ -16,10 +16,7 @@ FFmpegCallBack::FFmpegCallBack(_JavaVM *javaVM, JNIEnv *env, jobject *obj) {
     jclass jlz=jniEnv->GetObjectClass(jobj);
     if(!jlz){
 
-        if(LOG_DEBUG){
-
-            logd("jclass 获取错误")
-        }
+        logd("jclass 获取错误");
         return ;
     }
     // 获取到 Java层定义到方法，用于回调   onCallParpared  是方法到名字    ()V是签名
@@ -27,6 +24,7 @@ FFmpegCallBack::FFmpegCallBack(_JavaVM *javaVM, JNIEnv *env, jobject *obj) {
     jmid_load=env->GetMethodID(jlz,"onCallLoad","(Z)V");
     jmid_timeInfo=env->GetMethodID(jlz,"onCallTimeInfo","(II)V");
     jmid_audioData=env->GetMethodID(jlz,"onCallAudioData","(I)V");
+    jmid_complete=env->GetMethodID(jlz,"onCallComplete","()V");
 }
 
 // 析构函数
@@ -99,6 +97,7 @@ void FFmpegCallBack::onCallTimeInfo(int type,int curr, int total) {
     }
 }
 
+
 void FFmpegCallBack::onCallAudioData(int type, int length) {
     if(type == MAIN_THREAD)
     {
@@ -116,6 +115,27 @@ void FFmpegCallBack::onCallAudioData(int type, int length) {
             return;
         }
         jniEnv->CallVoidMethod(jobj, jmid_audioData,length);
+        javaVM->DetachCurrentThread();
+    }
+}
+
+void FFmpegCallBack::onCallComplete(int type) {
+    if(type == MAIN_THREAD)
+    {
+        jniEnv->CallVoidMethod(jobj, jmid_complete);    // 调用java层到方法
+    }
+    else if(type == CHILD_THREAD)
+    {
+        JNIEnv *jniEnv;
+        if(javaVM->AttachCurrentThread(&jniEnv, 0) != JNI_OK)
+        {
+            if(LOG_DEBUG)
+            {
+                loge("子线程到env获取失败");
+            }
+            return;
+        }
+        jniEnv->CallVoidMethod(jobj, jmid_complete);
         javaVM->DetachCurrentThread();
     }
 }

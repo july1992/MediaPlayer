@@ -38,6 +38,8 @@ public:
     int getAvpacket(AVPacket *packet);   //出队
 
     int getQueueSize();
+
+    void clearAvpacket(); // 释放队列
 };
 
 

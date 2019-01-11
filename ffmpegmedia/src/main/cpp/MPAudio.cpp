@@ -295,3 +295,54 @@ void MPAudio::resume() {
         (*pcmPlayerPlay)->SetPlayState(pcmPlayerPlay,  SL_PLAYSTATE_PLAYING);
     }
 }
+
+void MPAudio::release() {
+
+
+    if(queue!=NULL){
+        delete(queue);
+        queue=NULL;
+    }
+    if(pcmPlayerObject != NULL)
+    {
+        (*pcmPlayerObject)->Destroy(pcmPlayerObject);
+        pcmPlayerObject = NULL;
+        pcmPlayerPlay = NULL;
+        pcmBufferQueue = NULL;
+    }
+
+    if(outputMixObject != NULL)
+    {
+        (*outputMixObject)->Destroy(outputMixObject);
+        outputMixObject = NULL;
+        outputMixEnvironmentalReverb = NULL;
+    }
+
+    if(engineObject != NULL)
+    {
+        (*engineObject)->Destroy(engineObject);
+        engineObject = NULL;
+        engineEngine = NULL;
+    }
+
+    // 为 buffer分配内存空间了
+    if(buffer!=NULL){
+        free(buffer);
+        buffer=NULL;
+    }
+    if(avCodecContext != NULL)
+    {
+        avcodec_close(avCodecContext);
+        avcodec_free_context(&avCodecContext);
+        avCodecContext = NULL;
+    }
+
+    if(playStatus != NULL)
+    {
+        playStatus = NULL;
+    }
+    if(callBack != NULL)
+    {
+        callBack = NULL;
+    }
+}

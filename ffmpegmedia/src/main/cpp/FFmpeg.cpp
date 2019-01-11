@@ -7,6 +7,7 @@
 
 
 
+
 #include "FFmpeg.h"
 
 
@@ -15,6 +16,9 @@ FFmpeg::FFmpeg(PlayStatus *playstatus, FFmpegCallBack *callJava, const char *url
     this->playStatus = playstatus;
     this->callBack = callJava;
     this->url = url;
+
+    exit = false;
+    pthread_mutex_init(&init_mutex, NULL);  // 注册线程锁   编码过程中要加锁
 
 }
 
@@ -35,6 +39,8 @@ void FFmpeg::parpared() {
 void FFmpeg::decodeFFmpegThread() {
     logd("开始编码线程");
 
+    pthread_mutex_lock(&init_mutex);
+
     // 注册解码器  并初始化网络
     av_register_all();
     avformat_network_init();
@@ -46,6 +52,7 @@ void FFmpeg::decodeFFmpegThread() {
     if (avformat_open_input(&pFormatCtx, url, NULL, NULL) != 0) {
 
         loge("url打不开 :%s", url);
+        exit = true;
 
         return;
     }
@@ -54,6 +61,7 @@ void FFmpeg::decodeFFmpegThread() {
     // 获取流信息
     if (avformat_find_stream_info(pFormatCtx, NULL) < 0) {
         loge(" 获取不到流信息 %s", url);
+        exit = true;
         return;
     }
     logd("获取到了流信息");
@@ -68,8 +76,10 @@ void FFmpeg::decodeFFmpegThread() {
                                       callBack);
                 mpAudio->streanIndex = i;
                 mpAudio->codecPar = pFormatCtx->streams[i]->codecpar;
-                mpAudio->duration = pFormatCtx->duration/AV_TIME_BASE;   // AV_TIME_BASE  这个获取到到是网络音频到总时长，如果是直播就没有这个
+                mpAudio->duration = pFormatCtx->duration /
+                                    AV_TIME_BASE;   // AV_TIME_BASE  这个获取到到是网络音频到总时长，如果是直播就没有这个
                 mpAudio->time_base = pFormatCtx->streams[i]->time_base;
+                duration = mpAudio->duration;
 
             }
         }
@@ -80,27 +90,40 @@ void FFmpeg::decodeFFmpegThread() {
     // 获取解码器
     AVCodec *dec = avcodec_find_decoder(mpAudio->codecPar->codec_id);
     if (!dec) {
-        logd("找不到编码器")
+        logd("找不到编码器");
+        exit = true;
         return;
     }
     logd("找到了编码器")
     // 获取上下文
     mpAudio->avCodecContext = avcodec_alloc_context3(dec);
     if (!mpAudio->avCodecContext) {
-        logd("解码器上下文获取失败")
+        logd("解码器上下文获取失败");
+        exit = true;
         return;
     }
     logd("解码器上下文获取成功")
     if (avcodec_parameters_to_context(mpAudio->avCodecContext, mpAudio->codecPar) < 0) {
         loge("can not fill decodecctx");
+        exit = true;
         return;
     }
     if (avcodec_open2(mpAudio->avCodecContext, dec, 0) != 0) {
         loge("不能打开一个音频流")
+        exit = true;
         return;
     }
     loge("成功打开一个音频流")
-    callBack->onCallPrepared(CHILD_THREAD);  // 音频解码器已经准备好啦
+    if (callBack != NULL) {
+        if (playStatus != NULL && !playStatus->exit) {
+            callBack->onCallPrepared(CHILD_THREAD);  // 音频解码器已经准备好啦
+        } else {
+            exit = true;
+        }
+    }
+
+
+    pthread_mutex_unlock(&init_mutex);
 }
 
 // 开始播放
@@ -159,7 +182,7 @@ void FFmpeg::start() {
         }
     }
 
-//    while (1){
+//    while (1){      //  模拟出队列
 //        AVPacket *avPacket = av_packet_alloc();
 //        if(mpAudio->queue->getQueueSize()>0){
 //
@@ -171,16 +194,22 @@ void FFmpeg::start() {
 //        }
 //    }
 
+
+    if (callBack != NULL) {
+//        callBack->onCallComplete(CHILD_THREAD);
+        callBack->onCallLoad(CHILD_THREAD, false);
+    }
+
+    exit = true;
+
     logd("解码结束")
 }
 
-FFmpeg::~FFmpeg() {
 
-}
 
 void FFmpeg::pause() {
 
-    if(mpAudio!=NULL){
+    if (mpAudio != NULL) {
         mpAudio->pause();  // 暂停
     }
 
@@ -188,9 +217,57 @@ void FFmpeg::pause() {
 
 void FFmpeg::resume() {
 
-    if(mpAudio!=NULL){
+    if (mpAudio != NULL) {
         mpAudio->resume();   // 恢复播放
     }
+
+}
+
+// 释放audio
+void FFmpeg::release() {
+
+    logd("开始释放ffmpeg")
+    playStatus->exit = true;
+    pthread_mutex_lock(&init_mutex);
+
+    int sleepCount = 0;
+    while (!exit) {      // 睡眠10秒  强制退出
+        if (sleepCount > 1000) {
+            exit = true;
+        }
+
+        logd("ffmpeg等待了 %d", sleepCount);
+        sleepCount++;
+        av_usleep(1000 * 10); // 暂停10毫秒
+    }
+
+    logd("销毁 audio, 进而销毁队列 ，销毁队列的时候 会走队列的析构函数，进而调clear方法，把队列清空，并把队列里的对象都设置为NULL")
+    if (mpAudio != NULL) {
+        mpAudio->release();
+        delete (mpAudio);
+        mpAudio = NULL;
+    }
+
+    if (pFormatCtx != NULL) {
+        avformat_close_input(&pFormatCtx);
+        avformat_free_context(pFormatCtx);
+        pFormatCtx = NULL;
+    }
+
+    if (callBack != NULL) {
+        callBack = NULL;
+    }
+
+    if (playStatus != NULL) {
+        playStatus = NULL;
+    }
+
+    pthread_mutex_unlock(&init_mutex);
+
+}
+
+FFmpeg::~FFmpeg() {
+    pthread_mutex_destroy(&init_mutex);
 
 }
 
