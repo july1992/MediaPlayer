@@ -195,10 +195,10 @@ void FFmpeg::start() {
 //    }
 
 
-    if (callBack != NULL) {
+//    if (callBack != NULL) {
 //        callBack->onCallComplete(CHILD_THREAD);
-        callBack->onCallLoad(CHILD_THREAD, false);
-    }
+//
+//    }
 
     exit = true;
 
